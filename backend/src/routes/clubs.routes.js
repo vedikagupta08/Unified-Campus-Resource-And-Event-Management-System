@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../config/prisma.js';
-import { authRequired } from '../middleware/auth.js';
+import { authRequired, adminOnly } from '../middleware/auth.js';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -8,6 +9,24 @@ const router = Router();
 router.get('/', authRequired, async (_req, res) => {
   const clubs = await prisma.club.findMany({ orderBy: { name: 'asc' } });
   res.json(clubs);
+});
+
+// Create club (admin only)
+router.post('/', authRequired, adminOnly, async (req, res) => {
+  const schema = z.object({
+    name: z.string().min(1).max(100),
+    description: z.string().max(500).optional()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
+  const { name, description } = parsed.data;
+  try {
+    const club = await prisma.club.create({ data: { name, description } });
+    res.json(club);
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(409).json({ error: 'Club name already exists' });
+    res.status(500).json({ error: 'Failed to create club' });
+  }
 });
 
 // My memberships

@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClubRole {
+  MEMBER
+  ORGANIZER
+  HEAD
+}
+
+enum EventStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PUBLISHED
+  COMPLETED
+}
+
+enum ResourceType {
+  ROOM
+  HALL
+  LAB
+  EQUIPMENT
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  department   String?
+  academicYear String?
+  isAdmin      Boolean       @default(false)
+  memberships  Membership[]
+  events       Event[]       @relation("CreatedEvents")
+  registrations Registration[]
+  notifications Notification[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Club {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  description  String?
+  memberships  Membership[]
+  events       EventClub[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Membership {
+  id        String   @id @default(uuid())
+  userId    String
+  clubId    String
+  role      ClubRole
+  user      User     @relation(fields: [userId], references: [id])
+  club      Club     @relation(fields: [clubId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, clubId])
+}
+
+model Event {
+  id            String       @id @default(uuid())
+  title         String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  status        EventStatus  @default(DRAFT)
+  createdById   String
+  createdBy     User         @relation("CreatedEvents", fields: [createdById], references: [id])
+  budgetEstimate Int? 
+  budgetFinal    Int?
+  rejectionReason String?
+  clubs         EventClub[]
+  bookings      Booking[]
+  registrations Registration[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model EventClub {
+  id      String @id @default(uuid())
+  eventId String
+  clubId  String
+  event   Event  @relation(fields: [eventId], references: [id])
+  club    Club   @relation(fields: [clubId], references: [id])
+  @@unique([eventId, clubId])
+}
+
+model Resource {
+  id            String       @id @default(uuid())
+  name          String       @unique
+  type          ResourceType
+  requiresApproval Boolean   @default(true)
+  autoApprove   Boolean      @default(false)
+  capacity      Int?
+  bookings      Booking[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+  resourceId  String
+  eventId     String
+  startTime   DateTime
+  endTime     DateTime
+  approved    Boolean  @default(false)
+  rejected    Boolean  @default(false)
+  rejectionReason String?
+  resource    Resource @relation(fields: [resourceId], references: [id])
+  event       Event    @relation(fields: [eventId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([resourceId, startTime, endTime])
+}
+
+model Registration {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  @@unique([eventId, userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}

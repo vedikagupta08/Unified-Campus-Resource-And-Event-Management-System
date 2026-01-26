@@ -33,6 +33,8 @@ export default function App() {
             <Link to="/events">Events</Link>
             <Link to="/resources">Resources</Link>
             <Link to="/register">Register</Link>
+            <Link to="/clubs">Clubs</Link>
+            {user?.isAdmin && <Link to="/bookings">Bookings</Link>}
             {user?.isAdmin && <span className="text-sm text-green-700">Admin</span>}
           </nav>
           <div className="ml-auto flex items-center gap-3">

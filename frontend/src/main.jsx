@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard.jsx';
 import Events from './pages/Events.jsx';
 import Resources from './pages/Resources.jsx';
 import Register from './pages/Register.jsx';
+import Clubs from './pages/Clubs.jsx';
+import Bookings from './pages/Bookings.jsx';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -19,6 +21,8 @@ createRoot(document.getElementById('root')).render(
           <Route path="events" element={<Events />} />
           <Route path="resources" element={<Resources />} />
           <Route path="register" element={<Register />} />
+          <Route path="clubs" element={<Clubs />} />
+          <Route path="bookings" element={<Bookings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

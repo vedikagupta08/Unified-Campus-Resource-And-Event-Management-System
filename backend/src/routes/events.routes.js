@@ -1,15 +1,29 @@
 import { Router } from 'express';
 import { prisma } from '../config/prisma.js';
 import { authRequired, adminOnly } from '../middleware/auth.js';
+import { z } from 'zod';
 
 const router = Router();
 
+// List published events for participants (must be BEFORE dynamic routes)
+router.get('/public', async (_req, res) => {
+  const events = await prisma.event.findMany({ where: { status: 'PUBLISHED' }, orderBy: { startDate: 'asc' } });
+  res.json(events);
+});
+
 // Create event (DRAFT) by organizer/head for at least one club
 router.post('/', authRequired, async (req, res) => {
-  const { title, description, startDate, endDate, clubIds, budgetEstimate } = req.body;
-  if (!title || !startDate || !endDate || !Array.isArray(clubIds) || clubIds.length === 0) {
-    return res.status(400).json({ error: 'Missing fields' });
-  }
+  const schema = z.object({
+    title: z.string().min(1),
+    description: z.string().optional(),
+    startDate: z.string().datetime(),
+    endDate: z.string().datetime(),
+    clubIds: z.array(z.string().uuid()).min(1),
+    budgetEstimate: z.number().int().nonnegative().optional()
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
+  const { title, description, startDate, endDate, clubIds, budgetEstimate } = parsed.data;
   // Ensure user is organizer/head of at least one provided club unless admin
   if (!req.user.isAdmin) {
     const memberships = await prisma.membership.findMany({ where: { userId: req.user.id, clubId: { in: clubIds } } });
@@ -74,10 +88,6 @@ router.post('/:id/publish', authRequired, async (req, res) => {
   res.json(updated);
 });
 
-// List published events for participants
-router.get('/public', async (_req, res) => {
-  const events = await prisma.event.findMany({ where: { status: 'PUBLISHED' }, orderBy: { startDate: 'asc' } });
-  res.json(events);
-});
+// (moved '/public' route above dynamic routes)
 
 export default router;

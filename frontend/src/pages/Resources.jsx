@@ -8,6 +8,9 @@ export default function Resources() {
   const [resources, setResources] = React.useState([]);
   const [name, setName] = React.useState('Auditorium');
   const [type, setType] = React.useState('HALL');
+  const [requiresApproval, setRequiresApproval] = React.useState(true);
+  const [autoApprove, setAutoApprove] = React.useState(false);
+  const [capacity, setCapacity] = React.useState('');
   const token = useToken();
 
   const load = async () => {
@@ -18,7 +21,8 @@ export default function Resources() {
 
   const createResource = async () => {
     try {
-      await api.post('/resources', { name, type }, { headers: { Authorization: `Bearer ${token}` } });
+      const body = { name, type, requiresApproval, autoApprove, capacity: capacity ? Number(capacity) : undefined };
+      await api.post('/resources', body, { headers: { Authorization: `Bearer ${token}` } });
       load();
     } catch (e) { alert(e.response?.data?.error || 'Failed'); }
   };
@@ -31,7 +35,7 @@ export default function Resources() {
           {resources.map(r => (
             <li key={r.id} className="bg-white p-3 rounded border flex justify-between">
               <span>{r.name}</span>
-              <span className="text-xs text-gray-600">{r.type}</span>
+              <span className="text-xs text-gray-600">{r.type}{r.capacity ? ` • ${r.capacity}` : ''}{r.requiresApproval ? ' • approval' : ' • auto'}</span>
             </li>
           ))}
         </ul>
@@ -46,6 +50,15 @@ export default function Resources() {
             <option>LAB</option>
             <option>EQUIPMENT</option>
           </select>
+          <div className="flex items-center gap-3 text-sm">
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" checked={requiresApproval} onChange={e=>setRequiresApproval(e.target.checked)} /> requiresApproval
+            </label>
+            <label className="inline-flex items-center gap-1">
+              <input type="checkbox" checked={autoApprove} onChange={e=>setAutoApprove(e.target.checked)} /> autoApprove
+            </label>
+            <input className="border p-1 w-24" placeholder="capacity" value={capacity} onChange={e=>setCapacity(e.target.value)} />
+          </div>
           <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={createResource}>Create</button>
         </div>
       </div>

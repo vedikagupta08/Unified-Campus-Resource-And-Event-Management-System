@@ -20,6 +20,8 @@ export default function Events() {
   const [clubs, setClubs] = React.useState([]);
   const [selectedClubIds, setSelectedClubIds] = React.useState([]);
   const [myEvents, setMyEvents] = React.useState([]);
+  const [resources, setResources] = React.useState([]);
+  const [bookingInputs, setBookingInputs] = React.useState({});
   const [title, setTitle] = React.useState('Sample Event');
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
@@ -58,6 +60,17 @@ export default function Events() {
       } catch {}
     }
     loadClubsAndMyEvents();
+  }, [token]);
+
+  React.useEffect(() => {
+    async function loadResources() {
+      if (!token) return;
+      try {
+        const { data } = await api.get('/resources', { headers: { Authorization: `Bearer ${token}` } });
+        setResources(data);
+      } catch {}
+    }
+    loadResources();
   }, [token]);
 
   const isRegistered = (eventId) => myRegs.some(r => r.eventId === eventId);
@@ -113,6 +126,22 @@ export default function Events() {
       const { data: pub } = await api.get('/events/public');
       setList(pub);
     } catch (e) { alert(e.response?.data?.error || 'Failed to publish'); }
+  };
+
+  const changeBookingInput = (eventId, field, value) => {
+    setBookingInputs(prev => ({ ...prev, [eventId]: { ...(prev[eventId]||{}), [field]: value } }));
+  };
+
+  const requestBooking = async (eventId) => {
+    try {
+      const inputs = bookingInputs[eventId] || {};
+      if (!inputs.resourceId || !inputs.startTime || !inputs.endTime) {
+        alert('Select resource and set start/end');
+        return;
+      }
+      await api.post('/bookings', { eventId, resourceId: inputs.resourceId, startTime: inputs.startTime, endTime: inputs.endTime }, { headers: { Authorization: `Bearer ${token}` } });
+      alert('Booking requested');
+    } catch (e) { alert(e.response?.data?.error || 'Failed to request booking'); }
   };
 
   return (
@@ -178,6 +207,22 @@ export default function Events() {
                   {(ev.status === 'APPROVED') && (
                     <button onClick={() => publishEvent(ev.id)} className="text-sm bg-blue-600 text-white px-3 py-1 rounded">Publish</button>
                   )}
+                </div>
+                <div className="mt-3 p-2 bg-gray-50 rounded border">
+                  <div className="text-sm font-medium mb-1">Request Booking</div>
+                  <div className="grid sm:grid-cols-3 gap-2 items-center">
+                    <select className="border p-2 w-full" value={(bookingInputs[ev.id]?.resourceId)||''} onChange={e=>changeBookingInput(ev.id,'resourceId',e.target.value)}>
+                      <option value="">Select resource</option>
+                      {resources.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} ({r.type}{r.capacity?` • ${r.capacity}`:''}{r.requiresApproval?' • approval':' • auto'})</option>
+                      ))}
+                    </select>
+                    <input className="border p-2 w-full" placeholder="Start ISO" value={(bookingInputs[ev.id]?.startTime)||''} onChange={e=>changeBookingInput(ev.id,'startTime',e.target.value)} />
+                    <input className="border p-2 w-full" placeholder="End ISO" value={(bookingInputs[ev.id]?.endTime)||''} onChange={e=>changeBookingInput(ev.id,'endTime',e.target.value)} />
+                  </div>
+                  <div className="mt-2">
+                    <button className="text-sm bg-teal-600 text-white px-3 py-1 rounded" onClick={()=>requestBooking(ev.id)}>Request</button>
+                  </div>
                 </div>
               </li>
             ))}

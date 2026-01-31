@@ -4,6 +4,28 @@ import { authRequired, adminOnly } from '../middleware/auth.js';
 
 const router = Router();
 
+// Pending attention: counts for admin dashboard
+router.get('/pending-attention', authRequired, adminOnly, async (_req, res) => {
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  const [pendingEventApprovals, pendingBookings, totalClubs, recentEventClubIds] = await Promise.all([
+    prisma.event.count({ where: { status: 'SUBMITTED' } }),
+    prisma.booking.count({ where: { approved: false, rejected: false } }),
+    prisma.club.count(),
+    prisma.eventClub.findMany({
+      where: { event: { startDate: { gte: sixtyDaysAgo } } },
+      select: { clubId: true }
+    })
+  ]);
+  const recentSet = new Set(recentEventClubIds.map(ec => ec.clubId));
+  const clubsInactive60Days = totalClubs - recentSet.size;
+  res.json({
+    pendingEventApprovals,
+    pendingBookings,
+    clubsInactive60Days: Math.max(0, clubsInactive60Days)
+  });
+});
+
 router.get('/summary', authRequired, adminOnly, async (req, res) => {
   const { from, to } = req.query;
   let fromDate = undefined;

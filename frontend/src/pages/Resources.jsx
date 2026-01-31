@@ -1,12 +1,16 @@
 import React from 'react';
 import axios from 'axios';
+import { apiErrorMessage } from '../utils/apiError.js';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL + '/api' });
+
 function useToken() { return localStorage.getItem('token'); }
 function useUser() {
   const t = useToken();
   if (!t) return null;
-  try { const p = JSON.parse(atob(t.split('.')[1])); return { isAdmin: p.isAdmin }; } catch { return null; }
+  try { const p = JSON.parse(atob(t.split('.')[1])); return { globalRole: p.globalRole }; } catch { return null; }
 }
 
 export default function Resources() {
@@ -27,7 +31,7 @@ export default function Resources() {
       const { data } = await api.get('/resources', { headers: { Authorization: `Bearer ${token}` } });
       setResources(data);
     } catch (e) {
-      setError(e.response?.data?.error || 'Failed to load resources');
+      setError(apiErrorMessage(e, 'Failed to load resources'));
     } finally {
       setLoading(false);
     }
@@ -45,60 +49,96 @@ export default function Resources() {
       load();
       setSuccess('Resource created');
     } catch (e) {
-      setError(e.response?.data?.error || 'Failed to create resource');
+      setError(apiErrorMessage(e, 'Failed to create resource'));
     }
   };
 
-  if (!user?.isAdmin) return <div>Admin only.</div>;
+  if (!user?.globalRole || user.globalRole !== 'ADMIN') return <div>Admin only.</div>;
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Resources</h2>
-      {error && <div className="text-red-600 text-sm mb-3">{error}</div>}
-      {success && <div className="text-green-600 text-sm mb-3">{success}</div>}
-      {loading && <div className="text-gray-500 mb-3">Loading…</div>}
+      <h2 className="page-title">Resources</h2>
+      {error && <div className="alert-error">{error}</div>}
+      {success && <div className="alert-success">{success}</div>}
+      {loading && <LoadingSpinner label="Loading resources…" />}
       {!loading && (
         <>
           {!showCreate ? (
-            <button className="mb-3 px-3 py-2 bg-blue-600 text-white rounded" onClick={() => setShowCreate(true)}>Add Resource</button>
+            <button className="mb-4 btn-primary" onClick={() => setShowCreate(true)}>Add Resource</button>
           ) : (
-            <div className="bg-white p-3 rounded border mb-3 space-y-2">
-              <input className="border p-2 w-full" placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-              <select className="border p-2 w-full" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            <div className="card p-4 mb-4 space-y-3 shadow-card">
+              <input className="input-field" placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <select className="input-field" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
                 <option value="ROOM">Room</option>
                 <option value="HALL">Hall</option>
                 <option value="LAB">Lab</option>
                 <option value="EQUIPMENT">Equipment</option>
               </select>
-              <input className="border p-2 w-full" type="number" placeholder="Capacity (optional)" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} />
-              <label className="inline-flex items-center gap-2">
-                <input type="checkbox" checked={form.requiresApproval} onChange={e => setForm(f => ({ ...f, requiresApproval: e.target.checked }))} />
+              <input className="input-field" type="number" placeholder="Capacity (optional)" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} />
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={form.requiresApproval} onChange={e => setForm(f => ({ ...f, requiresApproval: e.target.checked }))} className="rounded border-gray-300" />
                 Requires Approval
               </label>
-              <label className="inline-flex items-center gap-2">
-                <input type="checkbox" checked={form.autoApprove} onChange={e => setForm(f => ({ ...f, autoApprove: e.target.checked }))} />
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 ml-4">
+                <input type="checkbox" checked={form.autoApprove} onChange={e => setForm(f => ({ ...f, autoApprove: e.target.checked }))} className="rounded border-gray-300" />
                 Auto Approve
               </label>
               <div className="flex gap-2">
-                <button className="px-3 py-2 bg-green-600 text-white rounded" onClick={create}>Create</button>
-                <button className="px-3 py-2 bg-gray-600 text-white rounded" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button className="btn-primary bg-green-600 hover:bg-green-700" onClick={create}>Create</button>
+                <button className="btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
               </div>
             </div>
           )}
-          <ul className="space-y-2">
+          {resources.length === 0 ? (
+            <EmptyState icon="resources" title="No resources yet" subtitle="Add your first resource to get started." />
+          ) : (
+          <ul className="space-y-3">
             {resources.map(r => (
-              <li key={r.id} className="bg-white p-3 rounded border">
-                <div className="font-medium">{r.name}</div>
-                <div className="text-xs text-gray-600">
+              <li key={r.id} className={`card p-4 shadow-card ${r.active === false ? 'opacity-60 border-gray-300' : ''}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium">{r.name}</div>
+                  {r.active === false && <span className="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600">Inactive</span>}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
                   Type: {r.type}
                   {r.capacity && ` • Capacity: ${r.capacity}`}
                   {r.requiresApproval ? ' • Requires Approval' : ' • No Approval Required'}
                   {r.autoApprove ? ' • Auto Approve' : ''}
                 </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Usage summary: Used {r.usageLast30Days ?? 0} times in the last 30 days
+                </div>
+                <div className="mt-2 flex gap-2">
+                  {r.active !== false ? (
+                    <button
+                      className="text-sm bg-amber-600 text-white px-3 py-1 rounded"
+                      onClick={async () => {
+                        try {
+                          await api.patch(`/resources/${r.id}`, { active: false }, { headers: { Authorization: `Bearer ${token}` } });
+                          load();
+                        } catch (e) { setError(apiErrorMessage(e, 'Failed to deactivate')); }
+                      }}
+                    >
+                      Deactivate
+                    </button>
+                  ) : (
+                    <button
+                      className="text-sm font-medium bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors"
+                      onClick={async () => {
+                        try {
+                          await api.patch(`/resources/${r.id}`, { active: true }, { headers: { Authorization: `Bearer ${token}` } });
+                          load();
+                        } catch (e) { setError(apiErrorMessage(e, 'Failed to activate')); }
+                      }}
+                    >
+                      Activate
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
-          {resources.length === 0 && <div className="text-sm text-gray-600">No resources found.</div>}
+          )}
         </>
       )}
     </div>

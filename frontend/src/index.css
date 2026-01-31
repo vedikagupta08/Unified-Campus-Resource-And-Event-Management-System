@@ -2,4 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes page-enter-fade {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+html { scroll-behavior: smooth; }
 html, body, #root { height: 100%; }
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200;
+  }
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200;
+  }
+  .btn-danger {
+    @apply px-4 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200;
+  }
+  .input-field {
+    @apply w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow duration-200;
+  }
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-shadow duration-200;
+  }
+  .page-title {
+    @apply text-xl font-semibold text-gray-900 mb-4;
+  }
+  .nav-link {
+    @apply text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200;
+  }
+  .nav-link-active {
+    @apply text-blue-600 font-medium;
+  }
+  .alert-error {
+    @apply text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3;
+  }
+  .alert-success {
+    @apply text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3;
+  }
+  .page-enter {
+    animation: page-enter-fade 0.3s ease-out forwards;
+  }
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50;
+  }
+  .loading-spinner {
+    @apply w-8 h-8 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin-slow;
+  }
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 px-6 text-center;
+  }
+  .empty-state-icon {
+    @apply text-5xl text-gray-300 mb-3;
+  }
+  .empty-state-title {
+    @apply font-semibold text-gray-700 mb-1;
+  }
+  .empty-state-subtitle {
+    @apply text-sm text-gray-500 max-w-sm;
+  }
+}

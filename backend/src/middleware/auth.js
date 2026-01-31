@@ -8,7 +8,7 @@ export function authRequired(req, res, next) {
   const token = header.slice(7);
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { id, email, isAdmin }
+    req.user = payload; // { id, email, globalRole }
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Invalid token' });
@@ -16,6 +16,6 @@ export function authRequired(req, res, next) {
 }
 
 export function adminOnly(req, res, next) {
-  if (!req.user?.isAdmin) return res.status(403).json({ error: 'Forbidden' });
+  if (!req.user || req.user.globalRole !== 'ADMIN') return res.status(403).json({ error: "You don't have permission to perform this action." });
   next();
 }

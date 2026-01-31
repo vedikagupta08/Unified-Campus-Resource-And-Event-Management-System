@@ -11,6 +11,9 @@ import bookingRoutes from './routes/bookings.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import clubRoutes from './routes/clubs.routes.js';
 import registrationRoutes from './routes/registrations.routes.js';
+import userRoutes from './routes/users.routes.js';
+import notificationRoutes from './routes/notifications.routes.js';
+import auditRoutes from './routes/audit.routes.js';
 
 dotenv.config();
 
@@ -50,6 +53,9 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/clubs', clubRoutes);
 app.use('/api/registrations', registrationRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/audit', auditRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
